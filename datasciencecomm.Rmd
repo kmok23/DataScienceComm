@@ -4,19 +4,78 @@ author: "kmok23"
 date: "February 4, 2016"
 output: html_document
 ---
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r}
-summary(cars)
+```{r load_packages, echo=FALSE, message=FALSE}
+Installed <- require("ggplot2")
+if (!Installed) {
+    install.packages("ggplot2", repos = "http://cran.rstudio.com")
+    library("ggplot2")
+}
 ```
 
-You can also embed plots, for example:
+```{r load_data, echo=FALSE}
+rawdata <- read.csv("sanfrancisco_incidents_summer_2014.csv")
+```
 
 ```{r, echo=FALSE}
-plot(cars)
+crime_cat <- as.data.frame(table(rawdata$Category), stringsAsFactors = FALSE)
+plotCategories <- ggplot(crime_cat)
+plotCategories <- plotCategories +
+    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#FF9900") + 
+    theme_bw() + 
+    labs(x = "Crime", y = "Occurrences", title = "Frequency by Category") + 
+    theme(axis.text.x=element_text(angle=90, size=9, hjust=1, vjust=0.5))
+print(plotCategories)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r, echo=FALSE}
+crime_day <- as.data.frame(table(rawdata$DayOfWeek), stringsAsFactors = FALSE)
+plotDay <- ggplot(crime_day)
+plotDay <- plotDay + 
+    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#FF9900") + 
+    theme_bw() + 
+    labs(x = "Day of Week", y = "Occurrences", title = "Frequency by Day") + 
+    theme(axis.text.x=element_text(angle=90, size=9, hjust=1, vjust=0.5))
+print(plotDay)
+```
+
+The top 10 crimes are:
+```{r, echo=FALSE}
+crime_desc <- as.data.frame(table(rawdata$Descript), stringsAsFactors = FALSE)
+crime_desc[order(-crime_desc$Freq),][1:10,]
+```
+
+The top crime is:
+```{r, echo=FALSE}
+crime_desc[order(-crime_desc$Freq),][1,]
+```
+
+The daily frequency of the top crime:
+```{r, echo=FALSE}
+gtadata <- rawdata[rawdata$Descript == "GRAND THEFT FROM LOCKED AUTO",]
+crime_gtaday <- as.data.frame(table(gtadata$DayOfWeek),
+                              stringsAsFactors = FALSE)
+plotGTADay <- ggplot(crime_gtaday)
+plotGTADay <- plotGTADay + 
+    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#FF9900") + 
+    theme_bw() + 
+    labs(x = "Day of Week", y = "Occurrences", title = 
+             "Grand Theft Auto by Day") + 
+    theme(axis.text.x=element_text(angle=90, size=9, hjust=1, vjust=0.5))
+print(plotGTADay)
+```
+
+The same plot scaled by the number of days in the observation period:
+```{r, echo=FALSE}
+gtadata <- rawdata[rawdata$Descript == "GRAND THEFT FROM LOCKED AUTO",]
+crime_gtaday <- as.data.frame(table(gtadata$DayOfWeek),
+                              stringsAsFactors = FALSE)
+crime_gtaday$Freq <- crime_gtaday$Freq / 92
+plotGTADay <- ggplot(crime_gtaday)
+plotGTADay <- plotGTADay + 
+    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#FF9900") + 
+    theme_bw() + 
+    labs(x = "Day of Week", y = "Average Occurrence Per Day", title = 
+             "Grand Theft Auto by Day") + 
+    theme(axis.text.x=element_text(angle=90, size=9, hjust=1, vjust=0.5))
+print(plotGTADay)
+```
