@@ -1,14 +1,26 @@
 ---
-title: "datasciencecomm"
-author: "kmok23"
+title: "Visualization of Crime in San Francisco"
+author: "Kent Mok"
 date: "February 4, 2016"
 output: html_document
 ---
+
+# Data Source
+The data used in this analysis is from the crime dataset of Summer 2014 in San
+Francisco. It can be found here: https://github.com/uwescience/datasci_course_materials/blob/master/assignment6/sanfrancisco_incidents_summer_2014.csv
+Additional data for San Francisco can be found at: https://data.sfgov.org/
+
 ```{r load_packages, echo=FALSE, message=FALSE}
 Installed <- require("ggplot2")
 if (!Installed) {
     install.packages("ggplot2", repos = "http://cran.rstudio.com")
     library("ggplot2")
+}
+
+Installed <- require("ggmap")
+if (!Installed) {
+    install.packages("ggmap", repos = "http://cran.rstudio.com")
+    library("ggmap")
 }
 ```
 
@@ -16,47 +28,61 @@ if (!Installed) {
 rawdata <- read.csv("sanfrancisco_incidents_summer_2014.csv")
 ```
 
+# Exploration of Data
+A quick visualization of the data by summarizing the crime incidents by their
+category shows that the "Larceny/Theft" category outnumbers the rest of the
+categories by almost three times.
 ```{r, echo=FALSE}
 crime_cat <- as.data.frame(table(rawdata$Category), stringsAsFactors = FALSE)
 plotCategories <- ggplot(crime_cat)
 plotCategories <- plotCategories +
-    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#FF9900") + 
+    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#0000CC") + 
     theme_bw() + 
     labs(x = "Crime", y = "Occurrences", title = "Frequency by Category") + 
     theme(axis.text.x=element_text(angle=90, size=9, hjust=1, vjust=0.5))
 print(plotCategories)
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=FALSE}
 crime_day <- as.data.frame(table(rawdata$DayOfWeek), stringsAsFactors = FALSE)
 plotDay <- ggplot(crime_day)
 plotDay <- plotDay + 
-    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#FF9900") + 
+    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#0000CC") + 
     theme_bw() + 
     labs(x = "Day of Week", y = "Occurrences", title = "Frequency by Day") + 
     theme(axis.text.x=element_text(angle=90, size=9, hjust=1, vjust=0.5))
 print(plotDay)
 ```
 
-The top 10 crimes are:
-```{r, echo=FALSE}
+The top 10 occurrences of crimes by description are:
+```{r, echo=FALSE, comment=NA}
 crime_desc <- as.data.frame(table(rawdata$Descript), stringsAsFactors = FALSE)
-crime_desc[order(-crime_desc$Freq),][1:10,]
+names(crime_desc) <- c("Description", "Frequency")
+print(crime_desc[order(-crime_desc$Frequency),][1:10,], row.names = FALSE)
 ```
+Four of the top ten crimes by descriptions are categorized as "Larceny/Theft,"
+so it makes sense that "Larceny/Theft" outnumbers all other crimes by so much.
+The top crime by description is "Grand theft from locked auto." It occurred more
+than three times the second top "Larceny/Theft" crime of "Petty theft of 
+property." Since it accounts for the majority of "Larceny/Theft" crimes, it will
+be the focus of the analysis.
 
-The top crime is:
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=FALSE}
 crime_desc[order(-crime_desc$Freq),][1,]
 ```
 
-The daily frequency of the top crime:
-```{r, echo=FALSE}
+#Data Analysis
+```{r, echo=FALSE, eval=FALSE}
 gtadata <- rawdata[rawdata$Descript == "GRAND THEFT FROM LOCKED AUTO",]
 crime_gtaday <- as.data.frame(table(gtadata$DayOfWeek),
                               stringsAsFactors = FALSE)
+crime_gtaday$Var1 <- factor(crime_gtaday$Var1, c("Monday", "Tuesday", 
+                                                 "Wednesday", "Thursday",
+                                                 "Friday", "Saturday", 
+                                                 "Sunday"))
 plotGTADay <- ggplot(crime_gtaday)
 plotGTADay <- plotGTADay + 
-    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#FF9900") + 
+    geom_bar(aes(x = Var1, y = Freq), stat = "identity", fill = "#0000CC") + 
     theme_bw() + 
     labs(x = "Day of Week", y = "Occurrences", title = 
              "Grand Theft Auto by Day") + 
@@ -64,18 +90,98 @@ plotGTADay <- plotGTADay +
 print(plotGTADay)
 ```
 
-The same plot scaled by the number of days in the observation period:
+A quick plot of the average occurrences of "Grand Theft From Locked Auto" by day
+reveals that there is a slight increase in occurrences on Fridays, Saturdays, 
+and Sundays over the other weekdays.
 ```{r, echo=FALSE}
 gtadata <- rawdata[rawdata$Descript == "GRAND THEFT FROM LOCKED AUTO",]
 crime_gtaday <- as.data.frame(table(gtadata$DayOfWeek),
                               stringsAsFactors = FALSE)
+crime_gtaday$Var1 <- factor(crime_gtaday$Var1, c("Monday", "Tuesday", 
+                                                 "Wednesday", "Thursday",
+                                                 "Friday", "Saturday", 
+                                                 "Sunday"))
 crime_gtaday$Freq <- crime_gtaday$Freq / 92
 plotGTADay <- ggplot(crime_gtaday)
 plotGTADay <- plotGTADay + 
-    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#FF9900") + 
+    geom_bar(aes(Var1, Freq), stat = "identity", fill = "#0000CC") + 
     theme_bw() + 
     labs(x = "Day of Week", y = "Average Occurrence Per Day", title = 
              "Grand Theft Auto by Day") + 
     theme(axis.text.x=element_text(angle=90, size=9, hjust=1, vjust=0.5))
 print(plotGTADay)
 ```
+
+This could possibly be attributed to more people going out in the city and
+parking their vehicles in the city. If they leave any valuables in their 
+vehicles, this would present more opportunities for break-ins and thefts. 
+
+```{r, echo=FALSE, eval=FALSE}
+crimeByTimeDay <- ggplot(gtadata)
+crimeByTimeDay <- crimeByTimeDay +
+    geom_point(aes(x = DayOfWeek, y = Time, alpha = 1/10), size = 0)
+#, aes(x=sex, y=total_bill, fill=time)) +
+#    geom_bar(stat="identity", position=position_dodge(), colour="black")
+print(crimeByTimeDay)
+```
+
+A visualization of the crime occurrences by the hour of day shows a sharp 
+increase during the hours of 6pm to 11pm.  
+```{r, echo=FALSE}
+crime_gtatime <- as.data.frame(table(gtadata$Time),
+                              stringsAsFactors = FALSE)
+crime_gtatime <- crime_gtatime[crime_gtatime$Freq != 0,]
+#crime_gtatime$Hour <- as.numeric(substr(crime_gtatime$Var1, 1, 2))
+crime_gtatime$Hour <- substr(crime_gtatime$Var1, 1, 2)
+GTATimeOfDay <- ggplot(crime_gtatime, aes(x = Hour, Freq))
+GTATimeOfDay <- GTATimeOfDay + 
+    stat_summary(fun.y = sum,  # Adds up all observations for the timeframe
+                 geom = "bar", fill = "#0000CC") +
+    theme_bw() + 
+    labs(x = "Time of Day", y = "Occurrences", title = 
+             "Grand Theft Auto by Time of Day") + 
+    theme(axis.text.x=element_text(angle=90, size=9, hjust=1, vjust=0.5)) +
+    scale_x_discrete(labels = c(paste0("0",seq(0,9,1),":00"),paste0(seq(10,23,1),":","00")))
+print(GTATimeOfDay)
+```
+  
+This could possibly be attributed by the aforementioned increase of vehicles
+with valuables parked in the city. Another contribution to the increase in
+grand theft from locked vehicles could be more suitable conditions for the
+activity due to sunset, which reduces available light and general visibility.
+  
+A plot of the locations of "Grand Theft From Locked Auto" incidents shows a high
+concentration of incidents near the Tenderloin, Fisherman's Wharf, Embarcadero,
+SOMA, and Cathedral Hill areas.
+```{r, echo=FALSE,message=FALSE}
+sfMap = map = get_map(location = 'San Francisco', zoom = 12)
+gtadata$Bin <- substr(gtadata$Time,1,2)
+gtadata$Bin <- cut(as.numeric(gtadata$Bin), breaks = c(0,6,12,18,24),
+                    labels = c("00:00", "06:00", "12:00", "18:00"))
+ggmap(sfMap) + geom_point(data = gtadata, aes(x = X, y = Y, color = Bin),
+                          size = 0.5, alpha = 0.7) +
+    scale_color_brewer(name = "Time of Day", 
+                       labels = c("00:00-06:00", "06:00-12:00", "12:00-18:00",
+                                  "18:00-24:00"), palette = "Set1") + 
+    guides(color = guide_legend(override.aes = list(alpha = 1))) +
+    labs(list(title = "Grand Theft Auto by Location and Time", x = "Longitude",
+              y = "Latitude"))
+```
+  
+These are all either tourist areas or areas with night life, which is in line
+with the reasoning that the occurrence of incidents are related to the
+opportunity from tourists visiting the city or others going to the city for a
+night out and leaving valuables in the vehicle.
+
+#Conclusion
+This analysis shows that the highest crime incidents are thefts from locked
+vehicles primarily in the hours between 6pm to 11pm. In order for the city to 
+reduce this type of crime, it should inform tourists and visitors not to leave
+any valuables in their vehicles when they are parked in the Tenderloin, 
+Fisherman's Wharf, Embarcadero, SOMA, and Cathedral Hill areas. They would be 
+well advised to be extra vigilant if they are parking and leaving their vehicles
+between the hours of 6pm to 11pm.
+
+#Reproducibility
+The code used in this analysis can be found at:  
+https://github.com/kmok23/DataScienceComm
